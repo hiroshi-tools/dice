@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>くじ引きサイコロ</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f4f7f6;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    user-select: none; /* 連続タップ時のテキスト選択を防ぐ */
+  }
+  #dice-container {
+    text-align: center;
+    cursor: pointer;
+    padding: 40px 60px;
+    border-radius: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    transition: transform 0.1s;
+  }
+  #dice-container:active {
+    transform: scale(0.95); /* タップした時に少し凹むアニメーション */
+  }
+  #dice {
+    font-size: 150px;
+    line-height: 1;
+    margin: 0;
+    color: #2c3e50;
+  }
+  #message {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #7f8c8d;
+  }
+</style>
+</head>
+<body>
+
+<div id="dice-container">
+  <div id="dice">⚀</div>
+  <div id="message">タップでスタート</div>
+</div>
+
+<script>
+  const diceElement = document.getElementById('dice');
+  const messageElement = document.getElementById('message');
+  const containerElement = document.getElementById('dice-container');
+
+  // サイコロの目（Unicodeの記号を使用）
+  const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  let isRolling = false;
+  let intervalId;
+
+  containerElement.addEventListener('click', () => {
+    if (isRolling) {
+      // ストップ処理
+      clearInterval(intervalId);
+      isRolling = false;
+      messageElement.textContent = 'タップでスタート';
+      messageElement.style.color = '#7f8c8d';
+    } else {
+      // スタート処理
+      isRolling = true;
+      messageElement.textContent = 'タップでストップ！';
+      messageElement.style.color = '#e74c3c';
+      
+      // 50ミリ秒ごとにサイコロの目をランダムに変更
+      intervalId = setInterval(() => {
+        const randomIndex = Math.floor(Math.random() * 6);
+        diceElement.textContent = diceFaces[randomIndex];
+      }, 50);
+    }
+  });
+</script>
+
+</body>
+</html>
