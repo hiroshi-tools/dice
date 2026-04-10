@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>くじ引きサイコロ</title>
+<title>くじ引きサイコロ（アニメーション版）</title>
 <style>
   body {
     display: flex;
@@ -14,28 +14,60 @@
     margin: 0;
     background-color: #f4f7f6;
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    user-select: none; /* 連続タップ時のテキスト選択を防ぐ */
+    user-select: none;
   }
   #dice-container {
     text-align: center;
     cursor: pointer;
-    padding: 40px 60px;
+    padding: 50px 70px;
     border-radius: 20px;
     background-color: #ffffff;
     box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     transition: transform 0.1s;
   }
   #dice-container:active {
-    transform: scale(0.95); /* タップした時に少し凹むアニメーション */
+    transform: scale(0.95);
   }
+  
+  /* サイコロ本体の基本スタイル */
   #dice {
     font-size: 150px;
     line-height: 1;
     margin: 0;
     color: #2c3e50;
+    display: inline-block; /* アニメーションのために必要 */
   }
+
+  /* ------------------------------
+     アニメーションの定義
+  ------------------------------ */
+  /* 1. 転がっている時のアニメーション（回転＋バウンド） */
+  @keyframes roll {
+    0%   { transform: rotate(0deg) translateY(0); }
+    25%  { transform: rotate(90deg) translateY(-20px); }
+    50%  { transform: rotate(180deg) translateY(0); }
+    75%  { transform: rotate(270deg) translateY(-10px); }
+    100% { transform: rotate(360deg) translateY(0); }
+  }
+
+  /* 2. 止まった時のアニメーション（ポップアップ） */
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.3) rotate(-10deg); color: #e74c3c; }
+    100% { transform: scale(1) rotate(0deg); color: #2c3e50; }
+  }
+
+  /* JavaScriptで付け外しするクラス */
+  .rolling {
+    animation: roll 0.35s infinite linear;
+    color: #3498db !important; /* 回っている時は青色 */
+  }
+  .stopped {
+    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
   #message {
-    margin-top: 20px;
+    margin-top: 25px;
     font-size: 20px;
     font-weight: bold;
     color: #7f8c8d;
@@ -54,25 +86,32 @@
   const messageElement = document.getElementById('message');
   const containerElement = document.getElementById('dice-container');
 
-  // サイコロの目（Unicodeの記号を使用）
   const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   let isRolling = false;
   let intervalId;
 
   containerElement.addEventListener('click', () => {
     if (isRolling) {
-      // ストップ処理
+      // --- ストップ処理 ---
       clearInterval(intervalId);
       isRolling = false;
       messageElement.textContent = 'タップでスタート';
       messageElement.style.color = '#7f8c8d';
+      
+      // アニメーションの切り替え（転がる→ポップ）
+      diceElement.classList.remove('rolling');
+      diceElement.classList.add('stopped');
+      
     } else {
-      // スタート処理
+      // --- スタート処理 ---
       isRolling = true;
       messageElement.textContent = 'タップでストップ！';
       messageElement.style.color = '#e74c3c';
       
-      // 50ミリ秒ごとにサイコロの目をランダムに変更
+      // アニメーションの切り替え（ポップのリセット→転がる）
+      diceElement.classList.remove('stopped');
+      diceElement.classList.add('rolling');
+      
       intervalId = setInterval(() => {
         const randomIndex = Math.floor(Math.random() * 6);
         diceElement.textContent = diceFaces[randomIndex];
