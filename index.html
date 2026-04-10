@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>くじ引きサイコロ（アニメーション版）</title>
+<title>3D くじ引きサイコロ</title>
 <style>
   body {
     display: flex;
@@ -14,108 +14,211 @@
     margin: 0;
     background-color: #f4f7f6;
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    user-select: none;
+    user-select: none; /* 連続タップ時のテキスト選択を防ぐ */
+    overflow: hidden; /* サイコロが画面外に出てもスクロールバーが出ないようにする */
   }
-  #dice-container {
-    text-align: center;
+
+  /* 画面全体のオーバーレイ */
+  #overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     cursor: pointer;
-    padding: 50px 70px;
+    z-index: 100;
+  }
+
+  /* 3D空間の設定 */
+  #dice-scene {
+    width: 200px; /* サイコロのサイズ */
+    height: 200px;
+    perspective: 1000px; /* 奥行き感の調整 */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* 中央から開始 */
+    transform-style: preserve-3d;
+  }
+
+  /* サイコロが動いている時のアニメーション */
+  #dice-scene.rolling #dice-cube {
+    animation: rolling 2s infinite linear;
+  }
+
+  /* 立方体の設定 */
+  #dice-cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease-out; /* ストップ時の回転をスムーズにする */
+  }
+
+  /* 各面の設定 */
+  .face {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background-color: rgba(255, 255, 255, 0.9); /* 少し透けさせる */
+    border: 2px solid #ccc;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     border-radius: 20px;
-    background-color: #ffffff;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    transition: transform 0.1s;
-  }
-  #dice-container:active {
-    transform: scale(0.95);
-  }
-  
-  /* サイコロ本体の基本スタイル */
-  #dice {
-    font-size: 150px;
-    line-height: 1;
-    margin: 0;
-    color: #2c3e50;
-    display: inline-block; /* アニメーションのために必要 */
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
   }
 
-  /* ------------------------------
-     アニメーションの定義
-  ------------------------------ */
-  /* 1. 転がっている時のアニメーション（回転＋バウンド） */
-  @keyframes roll {
-    0%   { transform: rotate(0deg) translateY(0); }
-    25%  { transform: rotate(90deg) translateY(-20px); }
-    50%  { transform: rotate(180deg) translateY(0); }
-    75%  { transform: rotate(270deg) translateY(-10px); }
-    100% { transform: rotate(360deg) translateY(0); }
+  /* 目のSVG (1〜6) */
+  .face svg {
+    width: 150px;
+    height: 150px;
   }
 
-  /* 2. 止まった時のアニメーション（ポップアップ） */
-  @keyframes pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.3) rotate(-10deg); color: #e74c3c; }
-    100% { transform: scale(1) rotate(0deg); color: #2c3e50; }
-  }
+  /* 各面の配置 */
+  #front  { transform: rotateY(  0deg) translateZ(100px); }
+  #back   { transform: rotateY(180deg) translateZ(100px); }
+  #right  { transform: rotateY( 90deg) translateZ(100px); }
+  #left   { transform: rotateY(-90deg) translateZ(100px); }
+  #top    { transform: rotateX( 90deg) translateZ(100px); }
+  #bottom { transform: rotateX(-90deg) translateZ(100px); }
 
-  /* JavaScriptで付け外しするクラス */
-  .rolling {
-    animation: roll 0.35s infinite linear;
-    color: #3498db !important; /* 回っている時は青色 */
-  }
-  .stopped {
-    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
+  /* 目の配置用のクラス */
+  .dot { fill: #e74c3c; } /* 1の目は赤 */
+  .dot.black { fill: #2c3e50; } /* 他の目は黒 */
 
+  /* メッセージ */
   #message {
-    margin-top: 25px;
-    font-size: 20px;
+    position: fixed;
+    bottom: 40px;
+    font-size: 24px;
     font-weight: bold;
     color: #7f8c8d;
+    z-index: 110; /* オーバーレイより手前に表示 */
+  }
+
+  /* 立方体の高速回転アニメーション */
+  @keyframes rolling {
+    0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+  }
+
+  /* サイコロが画面全体を動き回るアニメーション (画面をはみ出す) */
+  @keyframes movingAround {
+    0%, 100% { transform: translate(-50%, -50%) scale(1) rotateX(0deg) rotateY(0deg); }
+    10% { transform: translate(-30%, -20%) scale(1.2) rotateX(30deg) rotateY(10deg); }
+    20% { transform: translate(10%, -60%) scale(0.8) rotateX(-20deg) rotateY(-40deg); }
+    30% { transform: translate(40%, -10%) scale(1.5) rotateX(50deg) rotateY(70deg); }
+    40% { transform: translate(60%, 30%) scale(1) rotateX(-10deg) rotateY(20deg); }
+    50% { transform: translate(20%, 70%) scale(1.8) rotateX(-60deg) rotateY(-80deg); }
+    60% { transform: translate(-10%, 40%) scale(1.1) rotateX(20deg) rotateY(30deg); }
+    70% { transform: translate(-40%, 60%) scale(0.7) rotateX(-40deg) rotateY(-60deg); }
+    80% { transform: translate(-70%, 10%) scale(1.3) rotateX(70deg) rotateY(90deg); }
+    90% { transform: translate(-60%, -40%) scale(0.9) rotateX(-30deg) rotateY(-10deg); }
   }
 </style>
 </head>
 <body>
 
-<div id="dice-container">
-  <div id="dice">⚀</div>
-  <div id="message">タップでスタート</div>
+<div id="overlay"></div>
+
+<div id="dice-scene">
+  <div id="dice-cube">
+    <div id="front" class="face">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" class="dot"/></svg>
+    </div>
+    <div id="back" class="face">
+      <svg viewBox="0 0 100 100">
+        <circle cx="25" cy="25" r="10" class="dot black"/>
+        <circle cx="25" cy="50" r="10" class="dot black"/>
+        <circle cx="25" cy="75" r="10" class="dot black"/>
+        <circle cx="75" cy="25" r="10" class="dot black"/>
+        <circle cx="75" cy="50" r="10" class="dot black"/>
+        <circle cx="75" cy="75" r="10" class="dot black"/>
+      </svg>
+    </div>
+    <div id="right" class="face">
+      <svg viewBox="0 0 100 100">
+        <circle cx="25" cy="25" r="10" class="dot black"/>
+        <circle cx="75" cy="75" r="10" class="dot black"/>
+      </svg>
+    </div>
+    <div id="left" class="face">
+      <svg viewBox="0 0 100 100">
+        <circle cx="25" cy="25" r="10" class="dot black"/>
+        <circle cx="75" cy="75" r="10" class="dot black"/>
+        <circle cx="50" cy="50" r="10" class="dot black"/>
+        <circle cx="25" cy="75" r="10" class="dot black"/>
+        <circle cx="75" cy="25" r="10" class="dot black"/>
+      </svg>
+    </div>
+    <div id="top" class="face">
+      <svg viewBox="0 0 100 100">
+        <circle cx="25" cy="25" r="10" class="dot black"/>
+        <circle cx="50" cy="50" r="10" class="dot black"/>
+        <circle cx="75" cy="75" r="10" class="dot black"/>
+      </svg>
+    </div>
+    <div id="bottom" class="face">
+      <svg viewBox="0 0 100 100">
+        <circle cx="25" cy="25" r="10" class="dot black"/>
+        <circle cx="75" cy="75" r="10" class="dot black"/>
+        <circle cx="25" cy="75" r="10" class="dot black"/>
+        <circle cx="75" cy="25" r="10" class="dot black"/>
+      </svg>
+    </div>
+  </div>
 </div>
 
+<div id="message">タップでスタート</div>
+
 <script>
-  const diceElement = document.getElementById('dice');
+  const overlayElement = document.getElementById('overlay');
+  const diceSceneElement = document.getElementById('dice-scene');
+  const diceCubeElement = document.getElementById('dice-cube');
   const messageElement = document.getElementById('message');
-  const containerElement = document.getElementById('dice-container');
 
-  const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   let isRolling = false;
-  let intervalId;
 
-  containerElement.addEventListener('click', () => {
+  // 各面を正面に向けるための回転設定
+  const faceRotations = {
+    1: 'rotateX(0deg) rotateY(0deg)',
+    2: 'rotateX(0deg) rotateY(-90deg)',
+    3: 'rotateX(-90deg) rotateY(0deg)',
+    4: 'rotateX(90deg) rotateY(0deg)',
+    5: 'rotateX(0deg) rotateY(90deg)',
+    6: 'rotateX(0deg) rotateY(180deg)'
+  };
+
+  overlayElement.addEventListener('click', () => {
     if (isRolling) {
-      // --- ストップ処理 ---
-      clearInterval(intervalId);
+      // ストップ処理
       isRolling = false;
       messageElement.textContent = 'タップでスタート';
       messageElement.style.color = '#7f8c8d';
-      
-      // アニメーションの切り替え（転がる→ポップ）
-      diceElement.classList.remove('rolling');
-      diceElement.classList.add('stopped');
-      
+
+      // アニメーションを停止
+      diceSceneElement.classList.remove('rolling');
+      diceSceneElement.style.animationPlayState = 'paused'; // 動き回るアニメーションを一時停止
+
+      // ランダムな目を決定し、その面を正面に向ける
+      const randomDiceValue = Math.floor(Math.random() * 6) + 1;
+      diceCubeElement.style.transform = faceRotations[randomDiceValue];
+
     } else {
-      // --- スタート処理 ---
+      // スタート処理
       isRolling = true;
       messageElement.textContent = 'タップでストップ！';
       messageElement.style.color = '#e74c3c';
       
-      // アニメーションの切り替え（ポップのリセット→転がる）
-      diceElement.classList.remove('stopped');
-      diceElement.classList.add('rolling');
-      
-      intervalId = setInterval(() => {
-        const randomIndex = Math.floor(Math.random() * 6);
-        diceElement.textContent = diceFaces[randomIndex];
-      }, 50);
+      // 立方体の回転アニメーションを開始
+      diceSceneElement.classList.add('rolling');
+
+      // サイコロを画面全体に動かすアニメーション
+      diceSceneElement.style.animation = 'movingAround 5s infinite ease-in-out'; // アニメーションを適用
+      diceSceneElement.style.animationPlayState = 'running'; // アニメーションを実行
+
     }
   });
 </script>
